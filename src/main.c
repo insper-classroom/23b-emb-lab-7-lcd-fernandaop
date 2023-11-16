@@ -7,13 +7,18 @@
 #include "ili9341.h"
 #include "lvgl.h"
 #include "touch/touch.h"
-
+LV_FONT_DECLARE(dseg70);
+LV_FONT_DECLARE(dseg40);
+LV_FONT_DECLARE(dseg50);
+LV_FONT_DECLARE(dseg30);
+LV_FONT_DECLARE(dseg35);
 /************************************************************************/
 /* LCD / LVGL                                                           */
 /************************************************************************/
 
 #define LV_HOR_RES_MAX          (320)
 #define LV_VER_RES_MAX          (240)
+#define MY_CLOCK_SYMBOL "\xEF\x80\x97"
 
 /*A static or global variable to store the buffers*/
 static lv_disp_draw_buf_t disp_buf;
@@ -22,7 +27,16 @@ static lv_disp_draw_buf_t disp_buf;
 static lv_color_t buf_1[LV_HOR_RES_MAX * LV_VER_RES_MAX];
 static lv_disp_drv_t disp_drv;          /*A variable to hold the drivers. Must be static or global.*/
 static lv_indev_drv_t indev_drv;
-
+static  lv_obj_t * labelBtn1;
+static lv_obj_t * labelBtn2;
+static lv_obj_t * labelBtn3;
+static lv_obj_t * labelBtn4;
+static lv_obj_t * labelBtn5;
+static lv_obj_t * labelFloor;
+static lv_obj_t * labelClock;
+static lv_obj_t * labelSetValue;
+static lv_obj_t * labelSetValue2;
+volatile char flag = 1;
 /************************************************************************/
 /* RTOS                                                                 */
 /************************************************************************/
@@ -35,6 +49,7 @@ extern void vApplicationIdleHook(void);
 extern void vApplicationTickHook(void);
 extern void vApplicationMallocFailedHook(void);
 extern void xPortSysTickHandler(void);
+extern lv_font_t clock;
 
 extern void vApplicationStackOverflowHook(xTaskHandle *pxTask, signed char *pcTaskName) {
 	printf("stack overflow %x %s\r\n", pxTask, (portCHAR *)pcTaskName);
@@ -49,10 +64,7 @@ extern void vApplicationMallocFailedHook(void) {
 	configASSERT( ( volatile void * ) NULL );
 }
 
-/************************************************************************/
-/* lvgl                                                                 */
-/************************************************************************/
-
+//handlers
 static void event_handler(lv_event_t * e) {
 	lv_event_code_t code = lv_event_get_code(e);
 
@@ -63,6 +75,163 @@ static void event_handler(lv_event_t * e) {
 		LV_LOG_USER("Toggled");
 	}
 }
+static void menu_handler(lv_event_t * e) {
+	lv_event_code_t code = lv_event_get_code(e);
+
+	if(code == LV_EVENT_CLICKED) {
+		LV_LOG_USER("Clicked");
+	}
+	else if(code == LV_EVENT_VALUE_CHANGED) {
+		LV_LOG_USER("Toggled");
+	}
+}
+static void clk_handler(lv_event_t * e) {
+	lv_event_code_t code = lv_event_get_code(e);
+
+	if(code == LV_EVENT_CLICKED) {
+		LV_LOG_USER("Clicked");
+	}
+	else if(code == LV_EVENT_VALUE_CHANGED) {
+		LV_LOG_USER("Toggled");
+	}
+}
+static void up_handler(lv_event_t * e) {
+	lv_event_code_t code = lv_event_get_code(e);
+	char *c;
+	int temp;
+	if(code == LV_EVENT_CLICKED) {
+		c = lv_label_get_text(labelSetValue);
+		temp = atoi(c);
+		lv_label_set_text_fmt(labelSetValue, "%02d", temp + 1);
+	}
+}
+
+static void down_handler(lv_event_t * e) {
+	lv_event_code_t code = lv_event_get_code(e);
+	char *c;
+	int temp;
+	if(code == LV_EVENT_CLICKED) {
+		c = lv_label_get_text(labelSetValue);
+		temp = atoi(c);
+		lv_label_set_text_fmt(labelSetValue, "%02d", temp - 1);
+	}
+}
+static void power_btn_handler(lv_event_t *e) {
+	lv_event_code_t code = lv_event_get_code(e);
+
+	if (code == LV_EVENT_CLICKED) {
+		if (flag==1){
+			flag=0;
+		}else{
+			flag=1;
+		}
+	}
+}
+/************************************************************************/
+/* functions                                                              */
+/************************************************************************/
+
+void lv_termostato(void){
+	static lv_style_t style;
+	lv_style_init(&style);
+	lv_style_set_bg_color(&style, lv_color_black());
+	//btn1
+    lv_obj_t * btn1 = lv_btn_create(lv_scr_act());
+	lv_obj_add_event_cb(btn1, power_btn_handler, LV_EVENT_ALL, NULL);
+    lv_obj_align(btn1, LV_ALIGN_BOTTOM_LEFT, 10, -25);
+	lv_obj_add_style(btn1, &style, 0);
+
+    labelBtn1 = lv_label_create(btn1);
+	lv_label_set_text(labelBtn1, "[ " LV_SYMBOL_POWER " |");
+    lv_obj_center(labelBtn1);
+
+	//btn2
+	lv_obj_t * btn2 = lv_btn_create(lv_scr_act());
+    lv_obj_add_event_cb(btn2, menu_handler, LV_EVENT_ALL, NULL);
+    lv_obj_align_to(btn2,btn1,LV_ALIGN_OUT_RIGHT_MID, 0, -10);
+	lv_obj_add_style(btn2, &style, 0);
+
+    labelBtn2 = lv_label_create(btn2);
+	lv_label_set_text(labelBtn2, "M |");
+    lv_obj_center(labelBtn2);
+
+	//btn3
+	lv_obj_t * btn3 = lv_btn_create(lv_scr_act());
+	lv_obj_add_event_cb(btn3, clk_handler, LV_EVENT_ALL, NULL);
+	lv_obj_align_to(btn3,btn2, LV_ALIGN_OUT_RIGHT_MID, 0,-8);
+	lv_obj_add_style(btn3, &style, 0);
+
+	labelBtn3 = lv_label_create(btn3);
+	lv_label_set_text(labelBtn3,LV_SYMBOL_SETTINGS"] ");
+	lv_obj_center(labelBtn3);
+	
+	//btn4
+	lv_obj_t * btn4 = lv_btn_create(lv_scr_act());
+	lv_obj_add_event_cb(btn4, up_handler, LV_EVENT_ALL, NULL);
+	lv_obj_align_to(btn4,btn3, LV_ALIGN_RIGHT_MID, 45, -8);
+	lv_obj_add_style(btn4, &style, 0);
+
+	labelBtn4 = lv_label_create(btn4);
+	lv_label_set_text(labelBtn4, "   [ " LV_SYMBOL_UP);
+	lv_obj_center(labelBtn4);
+	
+	//btn5
+	lv_obj_t * btn5 = lv_btn_create(lv_scr_act());
+	lv_obj_add_event_cb(btn5, down_handler, LV_EVENT_ALL, NULL);
+	lv_obj_align_to(btn5,btn4, LV_ALIGN_OUT_RIGHT_MID, 0, -8);
+	lv_obj_add_style(btn5, &style, 0);
+	
+	labelBtn5 = lv_label_create(btn5);
+	lv_label_set_text(labelBtn5,LV_SYMBOL_DOWN " ]");
+	lv_obj_center(labelBtn5);
+	
+	labelFloor = lv_label_create(lv_scr_act());
+	lv_obj_align(labelFloor, LV_ALIGN_LEFT_MID, 35 , -35);
+	lv_obj_set_style_text_font(labelFloor, &dseg70, LV_STATE_DEFAULT);
+	lv_obj_set_style_text_color(labelFloor, lv_color_white(), LV_STATE_DEFAULT);
+	lv_label_set_text_fmt(labelFloor, "%02d", 23);
+	
+	labelClock = lv_label_create(lv_scr_act());
+	lv_obj_align(labelClock, LV_ALIGN_TOP_RIGHT, -15 , 15);
+	lv_obj_set_style_text_font(labelClock, &dseg35, LV_STATE_DEFAULT);
+	lv_obj_set_style_text_color(labelClock, lv_color_white(), LV_STATE_DEFAULT);
+	lv_label_set_text_fmt(labelClock, "%02d:46", 15);
+
+	
+	labelSetValue = lv_label_create(lv_scr_act());
+	lv_obj_align_to(labelSetValue, labelClock, LV_ALIGN_OUT_BOTTOM_MID, -20, 30);
+	lv_obj_set_style_text_font(labelSetValue, &dseg50, LV_STATE_DEFAULT);
+	lv_obj_set_style_text_color(labelSetValue, lv_color_white(), LV_STATE_DEFAULT);
+	lv_label_set_text_fmt(labelSetValue, "%02d", 22);
+
+	labelSetValue2 = lv_label_create(lv_scr_act());
+	lv_obj_align_to(labelSetValue2, labelSetValue, LV_ALIGN_OUT_RIGHT_MID, 0, 10);
+	lv_obj_set_style_text_font(labelSetValue2, &dseg30, LV_STATE_DEFAULT);
+	lv_obj_set_style_text_color(labelSetValue2, lv_color_white(), LV_STATE_DEFAULT);
+	lv_label_set_text_fmt(labelSetValue2, ".%01d", 4);
+
+ }
+ void lv_termostato2(void){
+	 static lv_style_t style;
+	 lv_style_init(&style);
+	 lv_style_set_bg_color(&style, lv_color_black());
+	 //btn1
+	 lv_obj_t * btn1 = lv_btn_create(lv_scr_act());
+	 lv_obj_add_event_cb(btn1, power_btn_handler, LV_EVENT_ALL, NULL);
+	 lv_obj_align(btn1, LV_ALIGN_BOTTOM_LEFT, 10, -25);
+	 lv_obj_add_style(btn1, &style, 0);
+
+	 labelBtn1 = lv_label_create(btn1);
+	 lv_label_set_text(labelBtn1, "[ " LV_SYMBOL_POWER " |");
+	 lv_obj_center(labelBtn1);
+
+ }
+
+/************************************************************************/
+/* lvgl                                                                 */
+/************************************************************************/
+
+
 
 void lv_ex_btn_1(void) {
 	lv_obj_t * label;
@@ -92,8 +261,11 @@ void lv_ex_btn_1(void) {
 
 static void task_lcd(void *pvParameters) {
 	int px, py;
-
-	lv_ex_btn_1();
+	if(flag==1){
+		lv_termostato();	
+	}else{
+		lv_termostato2();
+	}
 
 	for (;;)  {
 		lv_tick_inc(50);
@@ -101,6 +273,7 @@ static void task_lcd(void *pvParameters) {
 		vTaskDelay(50);
 	}
 }
+
 
 /************************************************************************/
 /* configs                                                              */
@@ -197,7 +370,7 @@ int main(void) {
 	if (xTaskCreate(task_lcd, "LCD", TASK_LCD_STACK_SIZE, NULL, TASK_LCD_STACK_PRIORITY, NULL) != pdPASS) {
 		printf("Failed to create lcd task\r\n");
 	}
-	
+
 	/* Start the scheduler. */
 	vTaskStartScheduler();
 
