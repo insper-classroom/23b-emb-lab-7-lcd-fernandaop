@@ -36,7 +36,6 @@ static lv_obj_t * labelFloor;
 static lv_obj_t * labelClock;
 static lv_obj_t * labelSetValue;
 static lv_obj_t * labelSetValue2;
-volatile char flag = 1;
 /************************************************************************/
 /* RTOS                                                                 */
 /************************************************************************/
@@ -116,17 +115,7 @@ static void down_handler(lv_event_t * e) {
 		lv_label_set_text_fmt(labelSetValue, "%02d", temp - 1);
 	}
 }
-static void power_btn_handler(lv_event_t *e) {
-	lv_event_code_t code = lv_event_get_code(e);
 
-	if (code == LV_EVENT_CLICKED) {
-		if (flag==1){
-			flag=0;
-		}else{
-			flag=1;
-		}
-	}
-}
 /************************************************************************/
 /* functions                                                              */
 /************************************************************************/
@@ -137,7 +126,7 @@ void lv_termostato(void){
 	lv_style_set_bg_color(&style, lv_color_black());
 	//btn1
     lv_obj_t * btn1 = lv_btn_create(lv_scr_act());
-	lv_obj_add_event_cb(btn1, power_btn_handler, LV_EVENT_ALL, NULL);
+	lv_obj_add_event_cb(btn1, event_handler, LV_EVENT_ALL, NULL);
     lv_obj_align(btn1, LV_ALIGN_BOTTOM_LEFT, 10, -25);
 	lv_obj_add_style(btn1, &style, 0);
 
@@ -211,21 +200,7 @@ void lv_termostato(void){
 	lv_label_set_text_fmt(labelSetValue2, ".%01d", 4);
 
  }
- void lv_termostato2(void){
-	 static lv_style_t style;
-	 lv_style_init(&style);
-	 lv_style_set_bg_color(&style, lv_color_black());
-	 //btn1
-	 lv_obj_t * btn1 = lv_btn_create(lv_scr_act());
-	 lv_obj_add_event_cb(btn1, power_btn_handler, LV_EVENT_ALL, NULL);
-	 lv_obj_align(btn1, LV_ALIGN_BOTTOM_LEFT, 10, -25);
-	 lv_obj_add_style(btn1, &style, 0);
 
-	 labelBtn1 = lv_label_create(btn1);
-	 lv_label_set_text(labelBtn1, "[ " LV_SYMBOL_POWER " |");
-	 lv_obj_center(labelBtn1);
-
- }
 
 /************************************************************************/
 /* lvgl                                                                 */
@@ -261,12 +236,7 @@ void lv_ex_btn_1(void) {
 
 static void task_lcd(void *pvParameters) {
 	int px, py;
-	if(flag==1){
-		lv_termostato();	
-	}else{
-		lv_termostato2();
-	}
-
+	lv_termostato();
 	for (;;)  {
 		lv_tick_inc(50);
 		lv_task_handler();
