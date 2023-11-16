@@ -96,11 +96,9 @@ static void clk_handler(lv_event_t * e) {
 }
 static void up_handler(lv_event_t * e) {
 	lv_event_code_t code = lv_event_get_code(e);
-	char *c;
-	int temp;
 	if(code == LV_EVENT_CLICKED) {
-		c = lv_label_get_text(labelSetValue);
-		temp = atoi(c);
+		char *c = lv_label_get_text(labelSetValue);
+		int temp = atoi(c);
 		lv_label_set_text_fmt(labelSetValue, "%02d", temp + 1);
 	}
 }
@@ -235,7 +233,6 @@ void lv_ex_btn_1(void) {
 /************************************************************************/
 
 static void task_lcd(void *pvParameters) {
-	int px, py;
 	lv_termostato();
 	for (;;)  {
 		lv_tick_inc(50);
@@ -291,7 +288,7 @@ void my_flush_cb(lv_disp_drv_t * disp_drv, const lv_area_t * area, lv_color_t * 
 }
 
 void my_input_read(lv_indev_drv_t * drv, lv_indev_data_t*data) {
-	int px, py, pressed;
+	int px, py;
 	
 	if (readPoint(&px, &py))
 		data->state = LV_INDEV_STATE_PRESSED;
